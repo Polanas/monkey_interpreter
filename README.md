@@ -1,0 +1,1 @@
+A Monkey interpreter written in Rust by following "Writing An Interpreter In Go" by Thorsten Ball. Why use Rust instead of Go? Well, because I saw a comment on Youtube saying that it's a good exercise.
