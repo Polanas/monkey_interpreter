@@ -43,23 +43,27 @@ impl Lexer {
             ')' => Some(Token::RParen),
             ',' => Some(Token::Comma),
             '+' => Some(Token::Plus),
+            '-' => Some(Token::Minus),
+            '!' => Some(Token::Bang),
+            '*' => Some(Token::Asterisk),
+            '/' => Some(Token::Slash),
+            '<' => Some(Token::LessThan),
+            '>' => Some(Token::GreaterThan),
             ';' => Some(Token::Semicolon),
             '\0' => None,
-            _ => {
-                if self.current_char.is_letter() {
-                    let ident = self.read_ident();
-                    return match ident.as_str() {
-                        "fn" => Some(Token::Function),
-                        "let" => Some(Token::Let),
-                        _ => Some(Token::Ident(ident)),
-                    };
-                } else if self.current_char.is_numeric() {
-                    let number: i32 = self.read_number().parse().unwrap();
-                    return Some(Token::Int(number));
-                } else {
-                    Some(Token::Illegal(self.current_char.to_string()))
-                }
+            _ if self.current_char.is_letter() => {
+                let ident = self.read_ident();
+                return match ident.as_str() {
+                    "fn" => Some(Token::Function),
+                    "let" => Some(Token::Let),
+                    _ => Some(Token::Ident(ident)),
+                };
             }
+            _ if self.current_char.is_numeric() => {
+                let number: i32 = self.read_number().parse().unwrap();
+                return Some(Token::Int(number));
+            }
+            _ => Some(Token::Illegal(self.current_char.to_string()))
         };
 
         self.read_char();
@@ -120,11 +124,13 @@ mod tests {
         let input = String::from(
             "let five = 5;
             let ten = 10;
+
             let add = fn(x, y) {
                 x + y;
-            }
-
-            let result = add(five, ten);",
+            };
+            let result = add(five, ten);
+            !-/*5;
+            5 < 10 > 5;",
         );
         let expected_tokens = vec![
             Token::Let,
@@ -142,7 +148,9 @@ mod tests {
 
         let mut lexer = Lexer::new(input);
         while let Some(token) = lexer.next_token() {
-            dbg!(token);
+            if let Token::Illegal(value) = token {
+                panic!("Illegal token found: {}", value);
+            }
         }
 
         // if token != test.expected_type {
