@@ -1,7 +1,7 @@
 mod token;
 mod lexer;
+mod char_util_trait;
+
 
 fn main() {
-    let token_type = token::TokenType::Plus;
-    println!("{}", token_type.to_string());
 }

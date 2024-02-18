@@ -1,9 +1,8 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TokenType {
-    Illegal,
-    EOF,
-    Ident,
-    Int,
+#[derive(Debug, PartialEq, Eq)]
+pub enum Token {
+    Illegal(String),
+    Ident(String),
+    Int(i32),
     Assign,
     Plus,
     Comma,
@@ -16,11 +15,11 @@ pub enum TokenType {
     Let,
 }
 
-impl TokenType {
+impl Token {
     pub fn to_string(&self) -> String {
         match self {
-            Self::Illegal | Self::EOF | Self::Ident | Self::Int | Self::Function | Self::Let => {
-                format!("{:?}", self)
+            Self::Function | Self::Let => {
+                format!("{:?}", self).to_lowercase()
             }
             Self::Assign => "=".to_owned(),
             Self::Semicolon => ";".to_owned(),
@@ -30,12 +29,9 @@ impl TokenType {
             Self::RParen => ")".to_owned(),
             Self::LBrace => "{".to_owned(),
             Self::RBrace => "}".to_owned(),
+            Self::Int(value) => value.to_string(),
+            Self::Ident(value) => value.to_owned(),
+            Self::Illegal(value) => value.to_owned(),
         }
     }
-}
-
-#[records::record]
-pub struct Token {
-    pub token_type: TokenType,
-    pub literal: String,
 }

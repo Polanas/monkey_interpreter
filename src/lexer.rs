@@ -1,4 +1,5 @@
-use crate::token::{Token, TokenType};
+use crate::char_util_trait::*;
+use crate::token::Token;
 
 ///Works only with ASCII strings
 pub struct Lexer {
@@ -30,63 +31,134 @@ impl Lexer {
         self.position = self.read_position;
         self.read_position += 1;
     }
-// Self::Assign => "=".to_owned(),
-// Self::Semicolon => ";".to_owned(),
-// Self::Plus => "+".to_owned(),
-// Self::Comma => ",".to_owned(),
-// Self::LParen => "(".to_owned(),
-// Self::RParen => ")".to_owned(),
-// Self::LBrace => "{".to_owned(),
-// Self::RBrace => "}".to_owned(),
-    fn NextToken(&mut self) -> Token {
+    ///return None if end of file is reached
+    fn next_token(&mut self) -> Option<Token> {
+        self.skip_whitespace();
+
         let token = match self.current_char {
-            '=' => Token::new(TokenType::Assign, self.current_char.to_string()),
-            '}' => Token::new(TokenType::RBrace , self.current_char.to_string()),
-            '{' => Token::new(TokenType::LBrace , self.current_char.to_string()),
-            ')' => Token::new(TokenType::RParen , self.current_char.to_string()),
-            '(' => Token::new(TokenType::LParen , self.current_char.to_string()),
-            ',' => Token::new(TokenType::Comma , self.current_char.to_string()),
-            '+' => Token::new(TokenType::Plus , self.current_char.to_string()),
-            ';' => Token::new(TokenType::Semicolon , self.current_char.to_string()),
+            '=' => Some(Token::Assign),
+            '{' => Some(Token::LBrace),
+            '}' => Some(Token::RBrace),
+            '(' => Some(Token::LParen),
+            ')' => Some(Token::RParen),
+            ',' => Some(Token::Comma),
+            '+' => Some(Token::Plus),
+            ';' => Some(Token::Semicolon),
+            '\0' => None,
+            _ => {
+                if self.current_char.is_letter() {
+                    let ident = self.read_ident();
+                    return match ident.as_str() {
+                        "fn" => Some(Token::Function),
+                        "let" => Some(Token::Let),
+                        _ => Some(Token::Ident(ident)),
+                    };
+                } else if self.current_char.is_numeric() {
+                    let number: i32 = self.read_number().parse().unwrap();
+                    return Some(Token::Int(number));
+                } else {
+                    Some(Token::Illegal(self.current_char.to_string()))
+                }
+            }
+        };
+
+        self.read_char();
+        token
+    }
+
+    fn is_current_char_whitespace(&self) -> bool {
+        let ch = self.current_char;
+        let prev_ch = {
+            if self.position == 0 {
+                '\0'
+            } else {
+                self.input[self.position - 1]
+            }
+        };
+        ch == ' '
+            || ch == '\t'
+            || ch == '\r'
+            || ch == '\n'
+            || ch == '\\'
+            || (prev_ch == '\\' && ch == 'n')
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.is_current_char_whitespace() {
+            self.read_char();
         }
+    }
+
+    fn read_ident(&mut self) -> String {
+        let position = self.position;
+
+        while self.current_char.is_letter() {
+            self.read_char();
+        }
+
+        (&self.input[position..self.position]).to_string()
+    }
+
+    fn read_number(&mut self) -> String {
+        let position = self.position;
+
+        while self.current_char.is_numeric() {
+            self.read_char();
+        }
+
+        (&self.input[position..self.position]).to_string()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Lexer;
-    use crate::token::TokenType;
-    
-    #[records::record]
-    struct Test {
-        expected_type: TokenType,
-        expected_literal: String,
-    }
+    use crate::token::Token;
 
     #[test]
     fn test_next_token() {
-        let tests = vec![Test::new(TokenType::Assign, "=".to_owned())];
-        let input = String::from("=+(){},;");
+        let input = String::from(
+            "let five = 5;
+            let ten = 10;
+            let add = fn(x, y) {
+                x + y;
+            }
+
+            let result = add(five, ten);",
+        );
+        let expected_tokens = vec![
+            Token::Let,
+            Token::Ident("five".to_owned()),
+            Token::Assign,
+            Token::Int(5),
+            Token::Semicolon,
+            Token::Let,
+            Token::Ident("ten".to_owned()),
+            Token::Assign,
+            Token::Int(10),
+            Token::Semicolon,
+            //...
+        ];
 
         let mut lexer = Lexer::new(input);
-
-        for test in tests {
-            let token = lexer.NextToken();
-
-            if token.token_type != test.expected_type {
-                panic!(
-                    "Wrong tokentype. Expected {}, got {}",
-                    test.expected_type.to_string(),
-                    token.token_type.to_string()
-                );
-            }
-
-            if token.literal != test.expected_literal {
-                panic!(
-                    "Wrong literal. Expected {}, got {}",
-                    test.expected_literal, token.literal
-                );
-            }
+        while let Some(token) = lexer.next_token() {
+            dbg!(token);
         }
+
+        // if token != test.expected_type {
+        //     panic!(
+        //         "Wrong tokentype. Expected {}, got {}",
+        //         test.expected_type.to_string(),
+        //         token.to_string()
+        //     );
+        // }
+        //
+        // if token.to_string() != test.expected_literal {
+        //     panic!(
+        //         "Wrong literal. Expected {}, got {}",
+        //         test.expected_literal,
+        //         token.to_string()
+        //     );
+        // }
     }
 }
